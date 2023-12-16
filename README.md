@@ -5,7 +5,7 @@ SpotiShuffle is a program that allows you to create new playlists in Spotify bas
 ## How it Works
 
 - When using the "similarity" option, SpotiShuffle will randomly select a starting point song and add it to the new playlist.
-- The program will then search for the song most similar to the one just added and add it next. The similarity function is the cosine similarity based on the (audio features provided by Spotify)[https://developer.spotify.com/documentation/web-api/reference/get-audio-features]. The function is described (here)[https://github.com/davidefornelli/SpotiShuffle/blob/96ac5bf4314fe3d92c46145b556512ea23ce49c3/spotishuffle.py#L320].
+- The program will then search for the song most similar to the one just added and add it next. The similarity function is the cosine similarity based on the [audio features provided by Spotify](https://developer.spotify.com/documentation/web-api/reference/get-audio-features). The function is described [here](https://github.com/davidefornelli/SpotiShuffle/blob/96ac5bf4314fe3d92c46145b556512ea23ce49c3/spotishuffle.py#L320).
 - This process continues, with SpotiShuffle picking the song most similar to the previously added song until the playlist is complete.
 - This way, the new playlist will have songs that flow well together based on their similarity.
 
