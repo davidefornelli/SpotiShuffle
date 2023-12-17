@@ -364,17 +364,17 @@ def similarity_sorter(
     # Select relevant audio features for similarity comparison
     dt_songs_features = dt_songs_features.filter(
         [
-            # 'acousticness',
+            'acousticness',
             'danceability',
             'energy',
-            # 'instrumentalness',
+            'instrumentalness',
             'key',
-            # 'loudness',
+            'loudness',
             # 'liveness',
             'mode',
-            # 'speechiness',
+            'speechiness',
             'tempo',
-            # 'time_signature',
+            'time_signature',
             'valence'
         ]
     )
