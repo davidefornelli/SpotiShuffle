@@ -364,17 +364,17 @@ def similarity_sorter(
     # Select relevant audio features for similarity comparison
     dt_songs_features = dt_songs_features.filter(
         [
-            'acousticness',
+            # 'acousticness',
             'danceability',
             'energy',
-            'instrumentalness',
+            # 'instrumentalness',
             'key',
-            'loudness',
-            'liveness',
+            # 'loudness',
+            # 'liveness',
             'mode',
-            'speechiness',
+            # 'speechiness',
             'tempo',
-            'time_signature',
+            # 'time_signature',
             'valence'
         ]
     )
@@ -397,7 +397,7 @@ def similarity_sorter(
     # Order the songs by finding the closest song to the current one until all songs are ordered
     while True:
         id_to_drop = first_id
-        second_id = dt_songs_dist_cp[first_id][dt_songs_dist_cp[first_id] == dt_songs_dist_cp[first_id].min()].index[0]
+        second_id = dt_songs_dist_cp[first_id][dt_songs_dist_cp[first_id] == dt_songs_dist_cp[first_id].max()].index[0]
         songs_new_order.append(second_id)
         dt_songs_dist_cp.drop(id_to_drop, axis=1, inplace=True)
         dt_songs_dist_cp.drop(id_to_drop, axis=0, inplace=True)
