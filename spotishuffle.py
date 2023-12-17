@@ -320,7 +320,8 @@ def create_playlist(
 def similarity_sorter(
     sp: Spotify,
     spotify_songs: List[dict],
-    start_index = 0
+    start_index: int = None,
+    song_seed_uri: str = None
 ) -> List[str]:
     """
     Orders a list of Spotify songs by their audio feature similarity.
@@ -332,6 +333,7 @@ def similarity_sorter(
         sp (Spotify): An authenticated instance of the Spotify client.
         spotify_songs (List[dict]): A list of dictionaries where each dictionary represents a Spotify song.
         start_index (int, optional): The index of the first song to start ordering from. Defaults to 0.
+        song_seed_uri (str, optional): The uri of the song to start ordering from. If provided, it overrides the start_index. Default is None.
 
     Returns:
         List[str]: A list of Spotify song URIs ordered by audio feature similarity.
@@ -391,13 +393,18 @@ def similarity_sorter(
 
     # Initialize the list of ordered songs starting with the song at the given start index
     songs_new_order = []
-    first_id = spotify_songs[start_index]
+    if song_seed_uri:
+        first_id = song_seed_uri
+    elif start_index:
+        first_id = spotify_songs[start_index]
+    else:
+        first_id = spotify_songs[random.randint(0, len(spotify_songs) - 1)]
     songs_new_order.append(first_id)
 
     # Order the songs by finding the closest song to the current one until all songs are ordered
     while True:
         id_to_drop = first_id
-        second_id = dt_songs_dist_cp[first_id][dt_songs_dist_cp[first_id] == dt_songs_dist_cp[first_id].max()].index[0]
+        second_id = dt_songs_dist_cp[first_id][dt_songs_dist_cp[first_id] == dt_songs_dist_cp[first_id].min()].index[0]
         songs_new_order.append(second_id)
         dt_songs_dist_cp.drop(id_to_drop, axis=1, inplace=True)
         dt_songs_dist_cp.drop(id_to_drop, axis=0, inplace=True)
@@ -414,7 +421,8 @@ def similarity_sorter(
 def playlist_mixer(
     sp: Spotify,
     tracks_uris: List[str],
-    order='similarity'
+    order='similarity',
+    song_seed_uri:str = None
 ) -> List[str]:
     """
     Shuffles and optionally orders a list of Spotify track URIs, then creates a playlist.
@@ -429,6 +437,7 @@ def playlist_mixer(
         order (str, optional): Determines the ordering of the shuffled tracks in the playlist.
                                'random' for random order, 'similarity' for similarity-based order.
                                Defaults to 'similarity'.
+        song_seed_uri (str, optional): The uri of the song to start ordering from. Default is None.
 
     Returns:
         bool: True if the playlist was created and pushed successfully, False otherwise.
@@ -437,19 +446,18 @@ def playlist_mixer(
     # Log the start of the shuffling process with a current timestamp.
     logging.info("Shuffling started at %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     
-    # Shuffle songs using a custom function that randomizes the order of provided track URIs.
-    logging.info("Randomizing song tracks")
-    spotify_songs_shuffled = spotify_randomize_songs(spotify_songs_uris=tracks_uris)
-
     # Decide on the naming and ordering of the playlist based on the 'order' parameter.
     if order == 'random':
-        spotify_songs_uris = spotify_songs_shuffled
+        # Shuffle songs using a custom function that randomizes the order of provided track URIs.
+        logging.info("Randomizing song tracks")
+        spotify_songs_uris = spotify_randomize_songs(spotify_songs_uris=tracks_uris)
     elif order == 'similarity':
         # Order the shuffled songs by their similarity.
         logging.info("Ordering songs by similarity")
         spotify_songs_uris = similarity_sorter(
             sp=sp,
-            spotify_songs=spotify_songs_shuffled
+            spotify_songs=tracks_uris,
+            song_seed_uri=song_seed_uri
         )
     else:
         raise ValueError("Unsupported order. Supported orders are 'similarity' and 'random'.")
@@ -535,9 +543,11 @@ def spotify_join_names(spotify_track):
 @click.command()
 @click.option('--order', '-o', default='similarity', type=click.Choice(['similarity', 'random']), help='Specify the order for mixing the playlist. Supported values: similarity, random.')
 @click.option('--playlist_name', '-p', required=False, help='Name of the playlist to be processed.')
+@click.option('--song_seed', '-s', required=False, help='Name of the song to be used as starting point. Use the format "NAME ARTIST".')
 def main(
     order: str,
-    playlist_name: str
+    playlist_name: str,
+    song_seed: str
     ):
     """
     Main function.
@@ -545,6 +555,7 @@ def main(
     Args:
         order: The order for mixing the playlist.
         playlist_name: Name of the playlist to be processed.
+        song_seed: Name of the song to be used as starting point. Use the format "NAME ARTIST".
 
     Returns:
         None
@@ -581,13 +592,24 @@ def main(
         # starred_songs = user_favorites(spotipy_client=spotipy_client)
         playlist_matched = "Starred"
         songs = fetch_starred_songs(spotipy_client=spotipy_client)
+    song_seed_uri = None
+    if song_seed:
+        song_names = [spotify_join_names(s) for s in songs]
+        fuzzy_match = process.extractOne(song_seed, song_names)
+        song_matched = fuzzy_match[0]
+        logging.info(f'Song seed: {song_matched}')
+        song_index = song_names.index(song_matched)
+        song_seed_uri = songs[song_index]['track']['uri']
+        
+
     tracks_uris = extract_uri(songs)
 
     # Mix the playlist with the given order
     spotify_songs_uris = playlist_mixer(
         sp=spotipy_client,
         tracks_uris=tracks_uris,
-        order=order
+        order=order,
+        song_seed_uri=song_seed_uri
     )
 
     # Initialize the time variable with the current datetime to use in creating playlist names.
